@@ -3,6 +3,13 @@ name: Bootstrap Terraform State
 on:
   workflow_dispatch:
   workflow_call:
+    outputs:
+      bucket:
+        value: ${{ jobs.bootstrap.outputs.bucket }}
+      lock_table:
+        value: ${{ jobs.bootstrap.outputs.lock_table }}
+      state_key:
+        value: ${{ jobs.bootstrap.outputs.state_key }}
 
 permissions:
   id-token: write
@@ -13,6 +20,11 @@ jobs:
     name: Bootstrap ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+
+    outputs:
+      bucket:     ${{ steps.vars.outputs.bucket }}
+      lock_table: ${{ steps.vars.outputs.lock_table }}
+      state_key:  ${{ steps.vars.outputs.state_key }}
 
     env:
       ENV: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}

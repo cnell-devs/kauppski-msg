@@ -23,9 +23,9 @@ jobs:
       contents: read
 
   plan:
-    needs: bootstrap
     name: Plan ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
+    needs: bootstrap
 
     env:
       ENV: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
@@ -48,24 +48,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.REGION }}
 
-      - name: Resolve account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
-
-      - name: Set derived variables
-        id: vars
-        run: |
-          echo "bucket=kauppski-terraform-state-${{ steps.account.outputs.id }}" >> "$GITHUB_OUTPUT"
-          echo "lock_table=kauppski-terraform-locks"                              >> "$GITHUB_OUTPUT"
-          echo "state_key=${{ env.ENV }}/terraform.tfstate"                      >> "$GITHUB_OUTPUT"
-
       - name: Terraform init
         run: |
           terraform init \
-            -backend-config="bucket=${{ steps.vars.outputs.bucket }}" \
-            -backend-config="key=${{ steps.vars.outputs.state_key }}" \
+            -backend-config="bucket=${{ needs.bootstrap.outputs.bucket }}" \
+            -backend-config="key=${{ needs.bootstrap.outputs.state_key }}" \
             -backend-config="region=${{ env.REGION }}" \
-            -backend-config="dynamodb_table=${{ steps.vars.outputs.lock_table }}" \
+            -backend-config="dynamodb_table=${{ needs.bootstrap.outputs.lock_table }}" \
             -backend-config="encrypt=true"
 
       - name: Terraform plan
@@ -86,7 +75,7 @@ jobs:
   apply:
     name: Apply ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
-    needs: plan
+    needs: [bootstrap, plan]
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
 
     env:
@@ -110,24 +99,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.REGION }}
 
-      - name: Resolve account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
-
-      - name: Set derived variables
-        id: vars
-        run: |
-          echo "bucket=kauppski-terraform-state-${{ steps.account.outputs.id }}" >> "$GITHUB_OUTPUT"
-          echo "lock_table=kauppski-terraform-locks"                              >> "$GITHUB_OUTPUT"
-          echo "state_key=${{ env.ENV }}/terraform.tfstate"                      >> "$GITHUB_OUTPUT"
-
       - name: Terraform init
         run: |
           terraform init \
-            -backend-config="bucket=${{ steps.vars.outputs.bucket }}" \
-            -backend-config="key=${{ steps.vars.outputs.state_key }}" \
+            -backend-config="bucket=${{ needs.bootstrap.outputs.bucket }}" \
+            -backend-config="key=${{ needs.bootstrap.outputs.state_key }}" \
             -backend-config="region=${{ env.REGION }}" \
-            -backend-config="dynamodb_table=${{ steps.vars.outputs.lock_table }}" \
+            -backend-config="dynamodb_table=${{ needs.bootstrap.outputs.lock_table }}" \
             -backend-config="encrypt=true"
 
       - name: Download plan artifact
