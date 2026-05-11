@@ -1,5 +1,5 @@
 resource "aws_apigatewayv2_api" "ws" {
-  name                       = "${var.app_name}-messenger-ws"
+  name                       = "${var.app_name}-${var.env}-messenger-ws"
   protocol_type              = "WEBSOCKET"
   route_selection_expression = "$request.body.action"
 }
@@ -34,8 +34,9 @@ resource "aws_apigatewayv2_route" "routes" {
 }
 
 resource "aws_apigatewayv2_stage" "prod" {
-  api_id      = aws_apigatewayv2_api.ws.id
-  name        = "prod"
+  count  = var.env == "prod" ? 1 : 0
+  api_id = aws_apigatewayv2_api.ws.id
+  name   = "prod"
   auto_deploy = true
 
   default_route_settings {
@@ -43,5 +44,19 @@ resource "aws_apigatewayv2_stage" "prod" {
     data_trace_enabled       = true
     throttling_burst_limit   = 100
     throttling_rate_limit    = 50
+  }
+}
+
+resource "aws_apigatewayv2_stage" "dev" {
+  count  = var.env == "dev" ? 1 : 0
+  api_id = aws_apigatewayv2_api.ws.id
+  name   = "dev"
+  auto_deploy = true
+
+  default_route_settings {
+    logging_level            = "INFO"
+    data_trace_enabled       = true
+    throttling_burst_limit   = 10
+    throttling_rate_limit    = 5
   }
 }

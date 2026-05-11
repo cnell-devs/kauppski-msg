@@ -9,7 +9,7 @@ data "aws_iam_policy_document" "lambda_assume_role" {
 }
 
 resource "aws_iam_role" "lambda_exec" {
-  name               = "${var.app_name}-messenger-lambda-role"
+  name               = "${var.app_name}-${var.env}-messenger-lambda-role"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
 }
 
@@ -49,7 +49,7 @@ data "aws_iam_policy_document" "messenger_access" {
 }
 
 resource "aws_iam_role_policy" "messenger_access" {
-  name   = "${var.app_name}-messenger-access"
+  name   = "${var.app_name}-${var.env}-messenger-access"
   role   = aws_iam_role.lambda_exec.id
   policy = data.aws_iam_policy_document.messenger_access.json
 }

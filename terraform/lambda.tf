@@ -26,7 +26,7 @@ data "archive_file" "lambda_zips" {
 resource "aws_lambda_function" "messenger" {
   for_each = local.functions
 
-  function_name    = "${var.app_name}-messenger-${each.key}"
+  function_name    = "${var.app_name}-${var.env}-messenger-${each.key}"
   role             = aws_iam_role.lambda_exec.arn
   runtime          = "python3.12"
   handler          = "${each.value}/handler.handler"
@@ -39,9 +39,9 @@ resource "aws_lambda_function" "messenger" {
       CONNECTIONS_TABLE  = aws_dynamodb_table.connections.name
       MESSAGES_TABLE     = aws_dynamodb_table.messages.name
       CONVERSATIONS_TABLE = aws_dynamodb_table.conversations.name
-      SUPABASE_JWT_SECRET = var.supabase_jwt_secret
+      SUPABASE_URL        = var.supabase_url
       # Set after API GW stage is known; computed via depends_on ordering
-      APIGW_ENDPOINT = "https://${aws_apigatewayv2_api.ws.id}.execute-api.us-east-1.amazonaws.com/prod"
+      APIGW_ENDPOINT = "https://${aws_apigatewayv2_api.ws.id}.execute-api.us-east-1.amazonaws.com/${var.env}"
     }
   }
 

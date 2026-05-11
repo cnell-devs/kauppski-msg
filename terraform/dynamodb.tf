@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "connections" {
-  name         = "${var.app_name}-connections"
+  name         = "${var.app_name}-${var.env}-connections"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "connectionId"
 
@@ -26,7 +26,7 @@ resource "aws_dynamodb_table" "connections" {
 }
 
 resource "aws_dynamodb_table" "messages" {
-  name         = "${var.app_name}-messages"
+  name         = "${var.app_name}-${var.env}-messages"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "conversationId"
   range_key    = "sk"
@@ -43,7 +43,7 @@ resource "aws_dynamodb_table" "messages" {
 }
 
 resource "aws_dynamodb_table" "conversations" {
-  name         = "${var.app_name}-conversations"
+  name         = "${var.app_name}-${var.env}-conversations"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "userId"
   range_key    = "conversationId"

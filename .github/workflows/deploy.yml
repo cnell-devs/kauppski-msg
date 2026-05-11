@@ -1,0 +1,132 @@
+name: Deploy Terraform
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "terraform/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    name: Plan ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    runs-on: ubuntu-latest
+
+    env:
+      ENV: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      REGION: us-east-1
+      TF_IN_AUTOMATION: true
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Resolve account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Set derived variables
+        id: vars
+        run: |
+          echo "bucket=kauppski-terraform-state-${{ steps.account.outputs.id }}" >> "$GITHUB_OUTPUT"
+          echo "lock_table=kauppski-terraform-locks"                              >> "$GITHUB_OUTPUT"
+          echo "state_key=${{ env.ENV }}/terraform.tfstate"                      >> "$GITHUB_OUTPUT"
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ steps.vars.outputs.bucket }}" \
+            -backend-config="key=${{ steps.vars.outputs.state_key }}" \
+            -backend-config="region=${{ env.REGION }}" \
+            -backend-config="dynamodb_table=${{ steps.vars.outputs.lock_table }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -var="env=${{ env.ENV }}" \
+            -var="supabase_url=${{ secrets.SUPABASE_URL }}" \
+            -out=tfplan \
+            -no-color
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ env.ENV }}
+          path: terraform/tfplan
+          retention-days: 1
+
+  apply:
+    name: Apply ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+
+    env:
+      ENV: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      REGION: us-east-1
+      TF_IN_AUTOMATION: true
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Resolve account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Set derived variables
+        id: vars
+        run: |
+          echo "bucket=kauppski-terraform-state-${{ steps.account.outputs.id }}" >> "$GITHUB_OUTPUT"
+          echo "lock_table=kauppski-terraform-locks"                              >> "$GITHUB_OUTPUT"
+          echo "state_key=${{ env.ENV }}/terraform.tfstate"                      >> "$GITHUB_OUTPUT"
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ steps.vars.outputs.bucket }}" \
+            -backend-config="key=${{ steps.vars.outputs.state_key }}" \
+            -backend-config="region=${{ env.REGION }}" \
+            -backend-config="dynamodb_table=${{ steps.vars.outputs.lock_table }}" \
+            -backend-config="encrypt=true"
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ env.ENV }}
+          path: terraform
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan

@@ -1,7 +1,6 @@
-variable "supabase_jwt_secret" {
-  description = "Supabase JWT secret used to validate WebSocket auth tokens"
+variable "supabase_url" {
+  description = "Supabase project URL used to fetch JWKS for JWT verification"
   type        = string
-  sensitive   = true
 }
 
 variable "app_name" {
