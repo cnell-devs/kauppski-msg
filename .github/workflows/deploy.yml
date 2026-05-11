@@ -15,7 +15,15 @@ permissions:
   contents: read
 
 jobs:
+  bootstrap:
+    uses: ./.github/workflows/bootstrap.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+
   plan:
+    needs: bootstrap
     name: Plan ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
 
