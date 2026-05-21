@@ -39,6 +39,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build lambda zips
+        run: |
+          pip install -r lambdas/requirements.txt -t lambdas/ --quiet
+          mkdir -p terraform/.lambda_zips
+          for fn in connect disconnect send_message get_messages list_conversations mark_read; do
+            zip -r terraform/.lambda_zips/${fn}.zip lambdas/ -x "**/__pycache__/*" -x "**/*.pyc" -q
+          done
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
