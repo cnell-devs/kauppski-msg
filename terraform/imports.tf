@@ -17,3 +17,9 @@ import {
   to = aws_iam_role.lambda_exec
   id = "${var.app_name}-${var.env}-messenger-lambda-role"
 }
+
+import {
+  for_each = local.functions
+  to       = aws_lambda_function.messenger[each.key]
+  id       = "${var.app_name}-${var.env}-messenger-${each.value}"
+}

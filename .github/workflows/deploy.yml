@@ -79,13 +79,11 @@ jobs:
             -out=tfplan \
             -no-color
 
-      - name: Upload artifacts
+      - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tf-artifacts-${{ env.ENV }}
-          path: |
-            terraform/tfplan
-            terraform/.lambda_zips/
+          name: tfplan-${{ env.ENV }}
+          path: terraform/tfplan
           retention-days: 1
 
   apply:
@@ -106,6 +104,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build lambda zips
+        working-directory: ${{ github.workspace }}
+        run: |
+          pip install -r lambdas/requirements.txt -t lambdas/ --quiet
+          mkdir -p terraform/.lambda_zips
+          for fn in connect disconnect send_message get_messages list_conversations mark_read; do
+            zip -r terraform/.lambda_zips/${fn}.zip lambdas/ -x "**/__pycache__/*" -x "**/*.pyc" -q
+          done
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -124,11 +136,11 @@ jobs:
             -backend-config="dynamodb_table=${{ needs.bootstrap.outputs.lock_table }}" \
             -backend-config="encrypt=true"
 
-      - name: Download artifacts
+      - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
-          name: tf-artifacts-${{ env.ENV }}
-          path: ${{ github.workspace }}
+          name: tfplan-${{ env.ENV }}
+          path: terraform
 
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
