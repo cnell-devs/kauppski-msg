@@ -79,11 +79,13 @@ jobs:
             -out=tfplan \
             -no-color
 
-      - name: Upload plan artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ env.ENV }}
-          path: terraform/tfplan
+          name: tf-artifacts-${{ env.ENV }}
+          path: |
+            terraform/tfplan
+            terraform/.lambda_zips/
           retention-days: 1
 
   apply:
@@ -122,10 +124,10 @@ jobs:
             -backend-config="dynamodb_table=${{ needs.bootstrap.outputs.lock_table }}" \
             -backend-config="encrypt=true"
 
-      - name: Download plan artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ env.ENV }}
+          name: tf-artifacts-${{ env.ENV }}
           path: terraform
 
       - name: Terraform apply
