@@ -11,16 +11,11 @@ locals {
   }
 }
 
-# Bundle each Lambda: its own handler dir + shared/ utilities
-data "archive_file" "lambda_zips" {
-  for_each    = local.functions
-  type        = "zip"
-  output_path = "${path.module}/.lambda_zips/${each.key}.zip"
-
-  source_dir = local.lambda_src_root
-
-  # We zip the whole lambdas/ root so shared/ is always available.
-  # Handler entry point: <name>/handler.handler
+resource "aws_lambda_layer_version" "deps" {
+  layer_name          = "${var.app_name}-${var.env}-messenger-deps"
+  filename            = "${path.module}/.lambda_zips/layer.zip"
+  source_code_hash    = filebase64sha256("${path.module}/.lambda_zips/layer.zip")
+  compatible_runtimes = ["python3.12"]
 }
 
 resource "aws_lambda_function" "messenger" {
@@ -30,18 +25,18 @@ resource "aws_lambda_function" "messenger" {
   role             = aws_iam_role.lambda_exec.arn
   runtime          = "python3.12"
   handler          = "${each.value}/handler.handler"
-  filename         = data.archive_file.lambda_zips[each.key].output_path
-  source_code_hash = data.archive_file.lambda_zips[each.key].output_base64sha256
+  filename         = "${path.module}/.lambda_zips/${each.key}.zip"
+  source_code_hash = filebase64sha256("${path.module}/.lambda_zips/${each.key}.zip")
+  layers           = [aws_lambda_layer_version.deps.arn]
   timeout          = 10
 
   environment {
     variables = {
-      CONNECTIONS_TABLE  = aws_dynamodb_table.connections.name
-      MESSAGES_TABLE     = aws_dynamodb_table.messages.name
+      CONNECTIONS_TABLE   = aws_dynamodb_table.connections.name
+      MESSAGES_TABLE      = aws_dynamodb_table.messages.name
       CONVERSATIONS_TABLE = aws_dynamodb_table.conversations.name
       SUPABASE_URL        = var.supabase_url
-      # Set after API GW stage is known; computed via depends_on ordering
-      APIGW_ENDPOINT = "https://${aws_apigatewayv2_api.ws.id}.execute-api.us-east-1.amazonaws.com/${var.env}"
+      APIGW_ENDPOINT      = "https://${aws_apigatewayv2_api.ws.id}.execute-api.us-east-1.amazonaws.com/${var.env}"
     }
   }
 

@@ -44,18 +44,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build lambda zips
+      - name: Build zips
         working-directory: ${{ github.workspace }}
         run: |
-          pip install -r lambdas/requirements.txt -t /tmp/lambda_deps/ --quiet
           mkdir -p terraform/.lambda_zips
+
+          # One layer zip: deps under python/ as required by Lambda layers
+          pip install -r lambdas/requirements.txt -t /tmp/layer/python/ --quiet
+          (cd /tmp/layer && zip -r ${{ github.workspace }}/terraform/.lambda_zips/layer.zip python/ \
+            -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
+
+          # One small zip per function: handler + shared only (no deps)
           for fn in connect disconnect send_message get_messages list_conversations mark_read; do
             staging=$(mktemp -d)
-            cp -r /tmp/lambda_deps/. "$staging/"
             cp -r lambdas/shared "$staging/shared"
             cp -r lambdas/${fn} "$staging/${fn}"
             (cd "$staging" && zip -r ${{ github.workspace }}/terraform/.lambda_zips/${fn}.zip . \
-              -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
+              -x "**/__pycache__/*" -x "**/*.pyc" -q)
             rm -rf "$staging"
           done
 
@@ -115,18 +120,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build lambda zips
+      - name: Build zips
         working-directory: ${{ github.workspace }}
         run: |
-          pip install -r lambdas/requirements.txt -t /tmp/lambda_deps/ --quiet
           mkdir -p terraform/.lambda_zips
+
+          # One layer zip: deps under python/ as required by Lambda layers
+          pip install -r lambdas/requirements.txt -t /tmp/layer/python/ --quiet
+          (cd /tmp/layer && zip -r ${{ github.workspace }}/terraform/.lambda_zips/layer.zip python/ \
+            -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
+
+          # One small zip per function: handler + shared only (no deps)
           for fn in connect disconnect send_message get_messages list_conversations mark_read; do
             staging=$(mktemp -d)
-            cp -r /tmp/lambda_deps/. "$staging/"
             cp -r lambdas/shared "$staging/shared"
             cp -r lambdas/${fn} "$staging/${fn}"
             (cd "$staging" && zip -r ${{ github.workspace }}/terraform/.lambda_zips/${fn}.zip . \
-              -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
+              -x "**/__pycache__/*" -x "**/*.pyc" -q)
             rm -rf "$staging"
           done
 
