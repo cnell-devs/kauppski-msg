@@ -139,7 +139,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ env.ENV }}
-          path: terraform
+          path: ${{ github.workspace }}
 
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
