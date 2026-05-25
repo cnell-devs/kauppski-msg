@@ -97,6 +97,7 @@ jobs:
           path: |
             terraform/tfplan
             terraform/.lambda_zips/
+          include-hidden-files: true
           retention-days: 1
 
   apply:
@@ -139,7 +140,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ env.ENV }}
-          path: ${{ github.workspace }}
+          path: terraform
 
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
