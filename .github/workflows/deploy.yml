@@ -90,11 +90,13 @@ jobs:
             -out=tfplan \
             -no-color
 
-      - name: Upload plan artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ env.ENV }}
-          path: terraform/tfplan
+          path: |
+            terraform/tfplan
+            terraform/.lambda_zips/
           retention-days: 1
 
   apply:
@@ -115,31 +117,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build zips
-        working-directory: ${{ github.workspace }}
-        run: |
-          mkdir -p terraform/.lambda_zips
-
-          # One layer zip: deps under python/ as required by Lambda layers
-          pip install -r lambdas/requirements.txt -t /tmp/layer/python/ --quiet
-          (cd /tmp/layer && zip -r ${{ github.workspace }}/terraform/.lambda_zips/layer.zip python/ \
-            -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
-
-          # One small zip per function: handler + shared only (no deps)
-          for fn in connect disconnect send_message get_messages list_conversations mark_read; do
-            staging=$(mktemp -d)
-            cp -r lambdas/shared "$staging/shared"
-            cp -r lambdas/${fn} "$staging/${fn}"
-            (cd "$staging" && zip -r ${{ github.workspace }}/terraform/.lambda_zips/${fn}.zip . \
-              -x "**/__pycache__/*" -x "**/*.pyc" -q)
-            rm -rf "$staging"
-          done
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -158,7 +135,7 @@ jobs:
             -backend-config="dynamodb_table=${{ needs.bootstrap.outputs.lock_table }}" \
             -backend-config="encrypt=true"
 
-      - name: Download plan artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ env.ENV }}
