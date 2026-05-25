@@ -50,7 +50,7 @@ jobs:
           pip install -r lambdas/requirements.txt -t lambdas/ --quiet
           mkdir -p terraform/.lambda_zips
           for fn in connect disconnect send_message get_messages list_conversations mark_read; do
-            zip -r terraform/.lambda_zips/${fn}.zip lambdas/ -x "**/__pycache__/*" -x "**/*.pyc" -q
+            (cd lambdas && zip -r ../terraform/.lambda_zips/${fn}.zip . -x "**/__pycache__/*" -x "**/*.pyc" -q)
           done
 
       - name: Setup Terraform
@@ -115,7 +115,7 @@ jobs:
           pip install -r lambdas/requirements.txt -t lambdas/ --quiet
           mkdir -p terraform/.lambda_zips
           for fn in connect disconnect send_message get_messages list_conversations mark_read; do
-            zip -r terraform/.lambda_zips/${fn}.zip lambdas/ -x "**/__pycache__/*" -x "**/*.pyc" -q
+            (cd lambdas && zip -r ../terraform/.lambda_zips/${fn}.zip . -x "**/__pycache__/*" -x "**/*.pyc" -q)
           done
 
       - name: Setup Terraform
