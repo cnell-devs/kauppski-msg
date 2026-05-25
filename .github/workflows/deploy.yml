@@ -47,10 +47,16 @@ jobs:
       - name: Build lambda zips
         working-directory: ${{ github.workspace }}
         run: |
-          pip install -r lambdas/requirements.txt -t lambdas/ --quiet
+          pip install -r lambdas/requirements.txt -t /tmp/lambda_deps/ --quiet
           mkdir -p terraform/.lambda_zips
           for fn in connect disconnect send_message get_messages list_conversations mark_read; do
-            (cd lambdas && zip -r ../terraform/.lambda_zips/${fn}.zip . -x "**/__pycache__/*" -x "**/*.pyc" -q)
+            staging=$(mktemp -d)
+            cp -r /tmp/lambda_deps/. "$staging/"
+            cp -r lambdas/shared "$staging/shared"
+            cp -r lambdas/${fn} "$staging/${fn}"
+            (cd "$staging" && zip -r ${{ github.workspace }}/terraform/.lambda_zips/${fn}.zip . \
+              -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
+            rm -rf "$staging"
           done
 
       - name: Setup Terraform
@@ -112,10 +118,16 @@ jobs:
       - name: Build lambda zips
         working-directory: ${{ github.workspace }}
         run: |
-          pip install -r lambdas/requirements.txt -t lambdas/ --quiet
+          pip install -r lambdas/requirements.txt -t /tmp/lambda_deps/ --quiet
           mkdir -p terraform/.lambda_zips
           for fn in connect disconnect send_message get_messages list_conversations mark_read; do
-            (cd lambdas && zip -r ../terraform/.lambda_zips/${fn}.zip . -x "**/__pycache__/*" -x "**/*.pyc" -q)
+            staging=$(mktemp -d)
+            cp -r /tmp/lambda_deps/. "$staging/"
+            cp -r lambdas/shared "$staging/shared"
+            cp -r lambdas/${fn} "$staging/${fn}"
+            (cd "$staging" && zip -r ${{ github.workspace }}/terraform/.lambda_zips/${fn}.zip . \
+              -x "**/__pycache__/*" -x "**/*.pyc" -x "**/*.dist-info/*" -x "**/*.egg-info/*" -q)
+            rm -rf "$staging"
           done
 
       - name: Setup Terraform
