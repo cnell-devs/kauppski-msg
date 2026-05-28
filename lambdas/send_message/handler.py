@@ -81,7 +81,6 @@ def handler(event, context):
         "conversationId": conversation_id,
         "messageId": message_id,
         "senderId": sender_id,
-        "itemId": item_id,
         "content": content,
         "createdAt": now,
     }

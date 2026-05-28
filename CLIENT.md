@@ -126,11 +126,12 @@ No response payload. The next `listConversations` will show `unreadCount: 0` for
   conversationId: string  // "<userA-sub>#<userB-sub>#<itemId>"
   messageId: string       // UUID
   senderId: string        // Supabase user UUID
-  itemId: string          // the item this conversation is about
   content: string
   createdAt: string       // ISO-8601 UTC, e.g. "2026-05-28T02:34:00+00:00"
 }
 ```
+
+`itemId` is not repeated on each message — parse it from the third segment of `conversationId` if you need it: `conversationId.split('#')[2]`.
 
 ### `Conversation`
 
