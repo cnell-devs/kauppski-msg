@@ -20,9 +20,9 @@ def handler(event, context):
     if not user_id:
         return {"statusCode": 403, "body": "Unknown connection"}
 
-    # Caller must be a participant
+    # Caller must be a participant: conversationId is <userA>#<userB>#<itemId>
     parts = conversation_id.split("#")
-    if user_id not in parts:
+    if len(parts) != 3 or user_id not in parts[:2]:
         return {"statusCode": 403, "body": "Not a participant"}
 
     query_kwargs = dict(

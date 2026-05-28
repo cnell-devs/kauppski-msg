@@ -22,10 +22,11 @@ def handler(event, context):
     body = json.loads(event.get("body") or "{}")
 
     recipient_id = body.get("recipientId")
+    item_id = body.get("itemId")
     content = body.get("content", "").strip()
 
-    if not recipient_id or not content:
-        return {"statusCode": 400, "body": "recipientId and content required"}
+    if not recipient_id or not item_id or not content:
+        return {"statusCode": 400, "body": "recipientId, itemId and content required"}
 
     sender_id = get_user_id_by_connection(connection_id)
     if not sender_id:
@@ -33,7 +34,7 @@ def handler(event, context):
 
     now = datetime.now(timezone.utc).isoformat()
     message_id = str(uuid4())
-    conversation_id = "#".join(sorted([sender_id, recipient_id]))
+    conversation_id = "#".join(sorted([sender_id, recipient_id]) + [item_id])
     sk = f"{now}#{message_id}"
 
     # Persist message
@@ -51,9 +52,10 @@ def handler(event, context):
     # Upsert conversation record for sender (reset unread)
     conversations_table().update_item(
         Key={"userId": sender_id, "conversationId": conversation_id},
-        UpdateExpression="SET otherUserId = :other, updatedAt = :ts, lastMessage = :msg",
+        UpdateExpression="SET otherUserId = :other, itemId = :item, updatedAt = :ts, lastMessage = :msg",
         ExpressionAttributeValues={
             ":other": recipient_id,
+            ":item": item_id,
             ":ts": now,
             ":msg": content[:100],
         },
@@ -63,11 +65,12 @@ def handler(event, context):
     conversations_table().update_item(
         Key={"userId": recipient_id, "conversationId": conversation_id},
         UpdateExpression=(
-            "SET otherUserId = :other, updatedAt = :ts, lastMessage = :msg "
+            "SET otherUserId = :other, itemId = :item, updatedAt = :ts, lastMessage = :msg "
             "ADD unreadCount :inc"
         ),
         ExpressionAttributeValues={
             ":other": sender_id,
+            ":item": item_id,
             ":ts": now,
             ":msg": content[:100],
             ":inc": 1,
@@ -78,6 +81,7 @@ def handler(event, context):
         "conversationId": conversation_id,
         "messageId": message_id,
         "senderId": sender_id,
+        "itemId": item_id,
         "content": content,
         "createdAt": now,
     }
