@@ -26,7 +26,7 @@ def validate_token(token: str) -> str:
         payload = jwt.decode(
             token,
             _get_jwks(),
-            algorithms=["RS256"],
+            algorithms=["RS256", "ES256"],
             options={"verify_aud": False},
         )
         user_id = payload.get("sub")
