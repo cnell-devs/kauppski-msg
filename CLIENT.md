@@ -63,7 +63,23 @@ You never create conversations explicitly — they exist as soon as the first me
 
 ## HTTP API
 
-For loading message history you don't need a WebSocket. Use the REST endpoint instead:
+For loading conversations and message history you don't need a WebSocket. Use the REST endpoints instead:
+
+### `GET /conversations` — list all conversations for the authenticated user
+
+```
+GET https://<http-api-id>.execute-api.us-east-1.amazonaws.com/<env>/conversations
+Authorization: Bearer <supabase-jwt>
+```
+
+Response:
+```json
+{"items": [<Conversation>, ...]}
+```
+
+Conversations are returned newest-first. Use this on initial page load instead of the WebSocket `listConversations` action.
+
+### `GET /conversations/{conversationId}/messages` — fetch message history
 
 ```
 GET https://<http-api-id>.execute-api.us-east-1.amazonaws.com/<env>/conversations/{conversationId}/messages

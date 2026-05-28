@@ -31,10 +31,36 @@ resource "aws_lambda_function" "http_get_messages" {
   }
 }
 
-resource "aws_lambda_permission" "http_apigw" {
-  statement_id  = "AllowHTTPAPIGW"
+resource "aws_lambda_permission" "http_apigw_get_messages" {
+  statement_id  = "AllowHTTPAPIGW-GetMessages"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.http_get_messages.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
+}
+
+resource "aws_lambda_function" "http_list_conversations" {
+  function_name    = "${var.app_name}-${var.env}-messenger-http_list_conversations"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "python3.12"
+  handler          = "http_list_conversations/handler.handler"
+  filename         = "${path.module}/.lambda_zips/http_list_conversations.zip"
+  source_code_hash = filebase64sha256("${path.module}/.lambda_zips/http_list_conversations.zip")
+  layers           = [aws_lambda_layer_version.deps.arn]
+  timeout          = 10
+
+  environment {
+    variables = {
+      CONVERSATIONS_TABLE = aws_dynamodb_table.conversations.name
+      SUPABASE_URL        = var.supabase_url
+    }
+  }
+}
+
+resource "aws_lambda_permission" "http_apigw_list_conversations" {
+  statement_id  = "AllowHTTPAPIGW-ListConversations"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.http_list_conversations.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
 }

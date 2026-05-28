@@ -86,6 +86,19 @@ resource "aws_apigatewayv2_route" "get_messages" {
   target    = "integrations/${aws_apigatewayv2_integration.http_get_messages.id}"
 }
 
+resource "aws_apigatewayv2_integration" "http_list_conversations" {
+  api_id                 = aws_apigatewayv2_api.http.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.http_list_conversations.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "list_conversations" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "GET /conversations"
+  target    = "integrations/${aws_apigatewayv2_integration.http_list_conversations.id}"
+}
+
 resource "aws_apigatewayv2_stage" "http" {
   api_id      = aws_apigatewayv2_api.http.id
   name        = var.env
