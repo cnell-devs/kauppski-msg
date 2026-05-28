@@ -1,6 +1,7 @@
 import os
 import json
 import boto3
+from decimal import Decimal
 from botocore.exceptions import ClientError
 
 _client = None
@@ -14,12 +15,18 @@ def get_client():
     return _client
 
 
+def _json_default(o):
+    if isinstance(o, Decimal):
+        return int(o) if o == o.to_integral_value() else float(o)
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
+
 def post_to_connection(connection_id: str, data: dict) -> bool:
     """Send JSON data to a WebSocket connection. Returns False if connection is gone."""
     try:
         get_client().post_to_connection(
             ConnectionId=connection_id,
-            Data=json.dumps(data).encode("utf-8"),
+            Data=json.dumps(data, default=_json_default).encode("utf-8"),
         )
         return True
     except ClientError as e:
