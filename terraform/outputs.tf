@@ -1,3 +1,8 @@
+output "http_api_url" {
+  description = "HTTP API base URL — set as NEXT_PUBLIC_MSG_API_URL in frontend/.env.local"
+  value       = aws_apigatewayv2_stage.http.invoke_url
+}
+
 output "wss_url" {
   description = "WebSocket URL — set as NEXT_PUBLIC_WS_URL in frontend/.env.local"
   value       = var.env == "prod" ? aws_apigatewayv2_stage.prod[0].invoke_url : aws_apigatewayv2_stage.dev[0].invoke_url

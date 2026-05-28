@@ -58,3 +58,36 @@ resource "aws_apigatewayv2_stage" "dev" {
     throttling_rate_limit  = 5
   }
 }
+
+# ── HTTP API ──────────────────────────────────────────────────────────────────
+
+resource "aws_apigatewayv2_api" "http" {
+  name          = "${var.app_name}-${var.env}-messenger-http"
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["*"]
+    allow_methods = ["GET", "OPTIONS"]
+    allow_headers = ["Authorization", "Content-Type"]
+    max_age       = 300
+  }
+}
+
+resource "aws_apigatewayv2_integration" "http_get_messages" {
+  api_id                 = aws_apigatewayv2_api.http.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.http_get_messages.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "get_messages" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "GET /conversations/{conversationId}/messages"
+  target    = "integrations/${aws_apigatewayv2_integration.http_get_messages.id}"
+}
+
+resource "aws_apigatewayv2_stage" "http" {
+  api_id      = aws_apigatewayv2_api.http.id
+  name        = var.env
+  auto_deploy = true
+}

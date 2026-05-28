@@ -11,6 +11,34 @@ locals {
   }
 }
 
+# HTTP Lambda — separate from the WS set so it gets its own permission/source_arn
+resource "aws_lambda_function" "http_get_messages" {
+  function_name    = "${var.app_name}-${var.env}-messenger-http_get_messages"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "python3.12"
+  handler          = "http_get_messages/handler.handler"
+  filename         = "${path.module}/.lambda_zips/http_get_messages.zip"
+  source_code_hash = filebase64sha256("${path.module}/.lambda_zips/http_get_messages.zip")
+  layers           = [aws_lambda_layer_version.deps.arn]
+  timeout          = 10
+
+  environment {
+    variables = {
+      MESSAGES_TABLE      = aws_dynamodb_table.messages.name
+      CONVERSATIONS_TABLE = aws_dynamodb_table.conversations.name
+      SUPABASE_URL        = var.supabase_url
+    }
+  }
+}
+
+resource "aws_lambda_permission" "http_apigw" {
+  statement_id  = "AllowHTTPAPIGW"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.http_get_messages.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
+}
+
 resource "aws_lambda_layer_version" "deps" {
   layer_name          = "${var.app_name}-${var.env}-messenger-deps"
   filename            = "${path.module}/.lambda_zips/layer.zip"

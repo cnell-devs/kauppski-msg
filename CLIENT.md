@@ -61,6 +61,33 @@ const conversationId = [...[me, them].sort(), itemId].join("#");
 
 You never create conversations explicitly — they exist as soon as the first message is sent. Always compute the ID this way; don't try to remember it.
 
+## HTTP API
+
+For loading message history you don't need a WebSocket. Use the REST endpoint instead:
+
+```
+GET https://<http-api-id>.execute-api.us-east-1.amazonaws.com/<env>/conversations/{conversationId}/messages
+Authorization: Bearer <supabase-jwt>
+```
+
+Query parameters:
+- `lastKey` (optional) — opaque pagination cursor from a previous response's `nextKey`.
+
+Response:
+```json
+{
+  "conversationId": "...",
+  "items": [<Message>, ...],
+  "nextKey": "<opaque string>" | null
+}
+```
+
+- Returns 50 messages oldest-first.
+- Pass `nextKey` as `lastKey` on the next request to paginate. Stop when `nextKey` is null.
+- The caller must be a participant (JWT `sub` must be one of the two user IDs in `conversationId`); otherwise returns `403`.
+
+The HTTP API base URL is in Terraform output `http_api_url`.
+
 ## Actions
 
 ### `sendMessage` — send a message about an item
